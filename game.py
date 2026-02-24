@@ -10,12 +10,36 @@ BRUSH_SPEED = 100
 
 
 class Brush:
-    def __init__(self, brush_image, start_pos, color):
-        self.color = color
+    def __init__(self, player_number: int = 1):
         self.radius = BRUSH_RADIUS
-        self.brush = brush_image
         self.speed = BRUSH_SPEED
-        self.pos = start_pos
+        self.brush = self._init_player_defaults(player_number)
+        self.path_locations = []
+        
+    @property
+    def diameter(self):
+        return self.radius * 2
+
+    def max_players(self):
+        return 2
+
+    def _init_player_defaults(self, player_number):
+
+        if player_number > self.max_players():
+            raise ValueError(f"Max players: {self.max_players()}")
+        if player_number not in [1, 2]:
+            raise ValueError("Player number must be 1 or 2")
+        
+        colors = ["orange", "blue"]
+        start_positions = [
+            pg.Vector2(WIDTH * 0.2, HEIGHT * 0.5),
+            pg.Vector2(WIDTH * 0.8, HEIGHT * 0.5)
+        ]
+        self.color = colors[player_number - 1]
+        self.pos = start_positions[player_number - 1]
+        brush = pg.Surface((self.diameter, self.diameter), pg.SRCALPHA)
+        pg.draw.circle(brush, pg.Color(self.color), (self.radius, self.radius), self.radius)
+        return brush
 
     def move(self, dt, up=False, down=False, left=False, right=False):
         if up:
@@ -37,6 +61,15 @@ class Brush:
         if self.pos.x > WIDTH - self.radius:
             self.pos.x = WIDTH - self.radius
 
+    def _trace_path(self):
+        self.path_locations.append(self.pos.copy())
+
+    def draw_path(self, screen: pg.Surface):
+        self._trace_path()
+        for pos in self.path_locations:
+            draw_pos = (pos.x - self.radius, pos.y - self.radius)
+            screen.blit(self.brush, draw_pos)
+
 
 def main():
     pg.init()
@@ -48,16 +81,8 @@ def main():
 
     screen.blit(background, (0, 0))
     # give each player their own start position so they don't share the same Vector2
-    p1_start = pg.Vector2(WIDTH / 2 - 40, HEIGHT / 2)
-    p2_start = pg.Vector2(WIDTH / 2 + 40, HEIGHT / 2)
-    # create a circular brush surface (no external file needed)
-    brush_size = BRUSH_RADIUS * 2
-    p1_image = pg.Surface((brush_size, brush_size), pg.SRCALPHA)
-    pg.draw.circle(p1_image, pg.Color("orange"), (BRUSH_RADIUS, BRUSH_RADIUS), BRUSH_RADIUS)
-    p1 = Brush(p1_image, p1_start, "orange")
-    p2_image = pg.Surface((brush_size, brush_size), pg.SRCALPHA)
-    pg.draw.circle(p2_image, pg.Color("blue"), (BRUSH_RADIUS, BRUSH_RADIUS), BRUSH_RADIUS)
-    p2 = Brush(p2_image, p2_start, "blue")
+    p1 = Brush(player_number=1)
+    p2 = Brush(player_number=2)
 
     pg.display.set_caption("Paint It!")
 
@@ -85,10 +110,14 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
-        draw_pos = (p1.pos.x - p1.brush.get_width() / 2, p1.pos.y - p1.brush.get_height() / 2)
-        screen.blit(p1.brush, draw_pos)
-        draw_pos = (p2.pos.x - p2.brush.get_width() / 2, p2.pos.y - p2.brush.get_height() / 2)
-        screen.blit(p2.brush, draw_pos)
+        draw_p1 = (p1.pos.x - p1.brush.get_width() / 2, p1.pos.y - p1.brush.get_height() / 2)
+        draw_p2 = (p2.pos.x - p2.brush.get_width() / 2, p2.pos.y - p2.brush.get_height() / 2)
+
+        screen.blit(p1.brush, draw_p1)
+        p1.draw_path(screen)
+        screen.blit(p2.brush, draw_p2)
+        p2.draw_path(screen)
+
         dt = clock.tick(60) / 1000
         pg.display.update()
 
