@@ -58,7 +58,7 @@ class Brush:
     
     @property
     def corner0(self):
-        return (self.pos.x - self.radius, self.pos.y - self.radius)
+        return (int(self.pos.x - self.radius), int(self.pos.y - self.radius))
 
     def move(self, dt, up=False, down=False, left=False, right=False):
         if up:
@@ -83,13 +83,31 @@ class Brush:
     def _log_path(self):
         self.path.locations.append(self.pos.copy())
 
-    def draw_path(self, screen: pg.Surface):
+    def draw_path(self, screen: pg.Surface, player_surfaces: list[pg.Surface] = None):
         # record current position and draw a circle onto the persistent path surface
         self._log_path()
 
         pg.draw.circle(self.path.area, self.path.color, self.pos, self.radius)
+
+        if self.n == 1:
+            other_player_surface = player_surfaces[1]
+        else:
+            other_player_surface = player_surfaces[0]
+        if self._overlap_with_path(other_player_surface):
+            self._blit_brush_head_on_path(other_player_surface)
+        
         # blit the accumulated path onto the main screen
         screen.blit(self.path.area, (0, 0))
+
+    def _overlap_with_path(self, other_player_surface: pg.Surface) -> bool:
+        own_path_mask = pg.mask.from_surface(self.path.area)
+        other_path_mask = pg.mask.from_surface(other_player_surface)
+
+        overlap = own_path_mask.overlap(other_path_mask, offset=(0, 0))
+        return overlap is not None
+    
+    def _blit_brush_head_on_path(self, other_player_surface: pg.Surface):
+        other_player_surface.blit(self.path.area, (0, 0))
 
 
 def player_move(player: Brush, dt) -> tuple[float, float]:
@@ -145,8 +163,10 @@ def main():
 
         screen.blit(background, (0, 0))
 
-        p2.draw_path(screen)
-        p1.draw_path(screen)
+        player_surface_list = [p1.path.area, p2.path.area]
+        p1.draw_path(screen, player_surfaces=player_surface_list)
+        p2.draw_path(screen, player_surfaces=player_surface_list)
+        
         screen.blit(p1.head, p1_location)
         screen.blit(p2.head, p2_location)
         
