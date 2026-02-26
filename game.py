@@ -12,8 +12,8 @@ BRUSH_SPEED = 100
 BRUSH_COLORS = [pg.Color("darkorange2"), pg.Color("darkorchid3")]
 PATH_COLORS = [pg.Color("orange"), pg.Color("orchid")]
 START_POS = [
-    pg.Vector2(WIDTH * 0.2, HEIGHT * 0.5),
-    pg.Vector2(WIDTH * 0.8, HEIGHT * 0.5)
+    pg.Vector2(WIDTH * 0.8, HEIGHT * 0.5),
+    pg.Vector2(WIDTH * 0.2, HEIGHT * 0.5)
 ]
 
 
@@ -178,3 +178,36 @@ def main():
 if __name__ == "__main__":
     main()
     pg.quit()
+
+
+def calculate_paint_percentage(player_path_area: pg.Surface) -> float:
+    # Create a mask from the player's path surface
+    path_mask = pg.mask.from_surface(player_path_area)
+
+    # Count the number of non-transparent (painted) pixels
+    painted_pixels = path_mask.count()
+
+    # Calculate the total screen area
+    total_screen_area = WIDTH * HEIGHT
+
+    # Calculate the percentage of the screen covered by the player's path
+    percentage = (painted_pixels / total_screen_area) * 100
+    return percentage
+
+
+def calculate_winner(p1: Brush, p2: Brush) -> int:
+    # Get the paint percentages for both players
+    p1_percentage = calculate_paint_percentage(p1.path.area)
+    p2_percentage = calculate_paint_percentage(p2.path.area)
+
+    # Print the percentage for both players (for debugging or display)
+    print(f"Player 1 painted {p1_percentage:.2f}% of the screen.")
+    print(f"Player 2 painted {p2_percentage:.2f}% of the screen.")
+
+    # Determine the winner based on the highest percentage
+    if p1_percentage > p2_percentage:
+        return 1  # Player 1 wins
+    elif p2_percentage > p1_percentage:
+        return 2  # Player 2 wins
+    else:
+        return 0  # Tie (both painted the same percentage)
