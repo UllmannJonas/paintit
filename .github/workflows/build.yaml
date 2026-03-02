@@ -14,9 +14,9 @@ jobs:
         os: [windows-latest, macos-latest]
     steps:
       - name: checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.12'
       - name: Install dependencies
@@ -42,14 +42,14 @@ jobs:
 
       - name: Upload Windows executable
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: paintit-${{ env.VERSION }}-win
           path: dist/paintit-${{ env.VERSION }}-win.exe
 
       - name: Upload MacOS executable
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: paintit-${{ env.VERSION }}-mac
           path: dist/paintit-${{ env.VERSION }}-mac.app
