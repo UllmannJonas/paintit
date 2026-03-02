@@ -1,0 +1,54 @@
+name: Build Windows and MacOS executables on Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+  strategy:
+    matrix:
+      os: [windows-latest, macos-latest]
+  steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install uv
+        uv sync --extra dev
+    
+    - name: get version from tag
+      id: get_version
+      run: echo VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+      
+    - name: Build Windows executable
+      if: matrix.os == 'windows-latest'
+      run: |
+        pyinstaller --onefile --windowed --name paintit-${{ env.VERSION }} --add-data "pics;pics" --icon=pics/brush.ico paintit.py
+        mv dist/paintit-${{ env.VERSION }}.exe dist/paintit-${{ env.VERSION }}-win.exe
+    
+    - name: Build MacOS executable
+      if: matrix.os == 'macos-latest'
+      run: |
+        pyinstaller --onefile --windowed --name "paintit-${{ env.VERSION }}" --add-data "pics:pics" --icon=pics/brush.ico paintit.py
+        mv dist/paintit-${{ env.VERSION }}.app dist/paintit-${{ env.VERSION }}-mac.app
+
+    - name: Upload Windows executable
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v2
+      with:
+        name: paintit-${{ env.VERSION }}-win
+        path: dist/paintit-${{ env.VERSION }}-win.exe
+
+    - name: Upload MacOS executable
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v2
+      with:
+        name: paintit-${{ env.VERSION }}-mac
+        path: dist/paintit-${{ env.VERSION }}-mac.app
