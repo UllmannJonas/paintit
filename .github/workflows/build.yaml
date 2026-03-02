@@ -3,7 +3,8 @@ name: Build Windows and MacOS executables on Tag
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+      - 'v*.*'    # Trigger on version tags like v1.0
+      - 'dev-*.*' # Trigger on development tags like dev-1.0
 
 jobs:
   build:
