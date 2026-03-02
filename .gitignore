@@ -1,5 +1,7 @@
 .vscode/
 pics/
+cleanup_build.py
+pyinstaller_command.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
