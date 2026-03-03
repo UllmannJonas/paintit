@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -39,7 +39,6 @@ jobs:
       - name: Check dist
         run: |
           ls dist
-          ls dist/paintit
 
       - name: Upload Windows executable
         if: matrix.os == 'windows-latest'
