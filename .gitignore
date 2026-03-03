@@ -1,5 +1,4 @@
 .vscode/
-pics/
 cleanup_build.py
 pyinstaller_command.txt
 

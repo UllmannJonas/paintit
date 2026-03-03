@@ -33,13 +33,13 @@ jobs:
       - name: Build Windows executable
         if: matrix.os == 'windows-latest'
         run: |
-          pyinstaller --onefile --windowed --name paintit-${{ env.VERSION }} --add-data=pics:pics --icon=pics/brush.ico paintit.py
+          pyinstaller --onefile --windowed --name paintit-${{ env.VERSION }} --add-data=assets:assets --icon=assets/brush.ico paintit.py
           mv dist/paintit-${{ env.VERSION }}.exe dist/paintit-${{ env.VERSION }}-win.exe
       
       - name: Build MacOS executable
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --onefile --windowed --name "paintit-${{ env.VERSION }}" --add-data=pics:pics --icon=pics/brush.ico paintit.py
+          pyinstaller --onefile --windowed --name "paintit-${{ env.VERSION }}" --add-data=assets:assets --icon=assets/brush.ico paintit.py
           mv dist/paintit-${{ env.VERSION }}.app dist/paintit-${{ env.VERSION }}-mac.app
 
       - name: Upload Windows executable
