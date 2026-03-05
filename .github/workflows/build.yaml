@@ -23,17 +23,17 @@ jobs:
         run: |
           python -m pip install uv
           uv sync --group dev
-          uv pip install pyinstaller pillow
+          uv pip install pillow
       
       - name: Build Windows executable
         if: matrix.os == 'windows-latest'
         run: |
-          pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
+          uv run pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
       
       - name: Build MacOS executable
         if: matrix.os == 'macos-latest'
         run: |
-          pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
+          uv run pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
 
       - name: Check dist
         run: |
