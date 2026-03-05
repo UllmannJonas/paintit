@@ -1,0 +1,54 @@
+name: Build Windows and MacOS executables on Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*'    # Trigger on version tags like v1.0
+      - 'dev-*.*' # Trigger on development tags like dev-1.0
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install uv
+          uv sync --group dev
+          uv pip install pillow
+      
+      - name: Build Windows executable
+        if: matrix.os == 'windows-latest'
+        run: |
+          uv run pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
+      
+      - name: Build MacOS executable
+        if: matrix.os == 'macos-latest'
+        run: |
+          uv run pyinstaller --onefile --windowed --add-data=assets:assets --icon=assets/brush.ico paintit.py
+
+      - name: Check dist
+        run: |
+          ls dist
+
+      - name: Upload Windows executable
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: paintit-win
+          path: dist/paintit.exe
+
+      - name: Upload MacOS executable
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: paintit-mac
+          path: dist/paintit.app

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import os
 import sys
 
+
 import pygame as pg
 
 WIDTH = 720
