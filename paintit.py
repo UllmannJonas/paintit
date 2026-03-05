@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import os
 import sys
-
+from time import time
 
 import pygame as pg
 
@@ -141,52 +141,6 @@ def player_move(player: Brush, dt) -> tuple[float, float]:
     return player.corner0
 
 
-def main():
-    pg.init()
-    clock = pg.time.Clock()
-    screen = pg.display.set_mode((WIDTH, HEIGHT))
-    dt = 0
-    background_image_path = resource_path("pics/wooden_floor.jpg")
-    background = pg.image.load(background_image_path).convert()
-    background = pg.transform.scale(background, (WIDTH, HEIGHT))
-
-    screen.blit(background, (0, 0))
-    # give each player their own start position so they don't share the same Vector2
-    p1 = Brush(player_number=1)
-    p2 = Brush(player_number=2)
-
-    pg.display.set_caption("Paint It!")
-
-    while True:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                return
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_ESCAPE:
-                    return
-
-        p1_location = player_move(p1, dt)
-        p2_location = player_move(p2, dt)
-
-        screen.blit(background, (0, 0))
-
-        player_surface_list = [p1.path.area, p2.path.area]
-        p1.draw_path(screen, player_surfaces=player_surface_list)
-        p2.draw_path(screen, player_surfaces=player_surface_list)
-        
-        screen.blit(p1.head, p1_location)
-        screen.blit(p2.head, p2_location)
-        
-
-        dt = clock.tick(60) / 1000
-        pg.display.update()
-
-
-if __name__ == "__main__":
-    main()
-    pg.quit()
-
-"""
 def calculate_paint_percentage(player_path_area: pg.Surface) -> float:
     # Create a mask from the player's path surface
     path_mask = pg.mask.from_surface(player_path_area)
@@ -218,4 +172,54 @@ def calculate_winner(p1: Brush, p2: Brush) -> int:
         return 2  # Player 2 wins
     else:
         return 0  # Tie (both painted the same percentage)
-"""
+
+
+def main():
+    # t0 = time()
+    pg.init()
+    clock = pg.time.Clock()
+    screen = pg.display.set_mode((WIDTH, HEIGHT))
+    dt = 0
+    background_image_path = resource_path("assets/wooden_floor.jpg")
+    background = pg.image.load(background_image_path).convert()
+    background = pg.transform.scale(background, (WIDTH, HEIGHT))
+
+    screen.blit(background, (0, 0))
+    # give each player their own start position so they don't share the same Vector2
+    p1 = Brush(player_number=1)  # p1 is orange
+    p2 = Brush(player_number=2)  # p2 is purple
+
+    pg.display.set_caption("Paint It!")
+
+    while True:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                return
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_ESCAPE:
+                    return
+
+        p1_location = player_move(p1, dt)
+        p2_location = player_move(p2, dt)
+
+        screen.blit(background, (0, 0))
+
+        player_surface_list = [p1.path.area, p2.path.area]
+        p1.draw_path(screen, player_surfaces=player_surface_list)
+        p2.draw_path(screen, player_surfaces=player_surface_list)
+        
+        screen.blit(p1.head, p1_location)
+        screen.blit(p2.head, p2_location)
+        
+
+        dt = clock.tick(60) / 1000
+        pg.display.update()
+        # t1 = time()
+        # if t1 - t0 >= 60:
+        #     calculate_winner(p1, p2)
+        #     return
+
+
+if __name__ == "__main__":
+    main()
+    pg.quit()
