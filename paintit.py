@@ -175,10 +175,12 @@ def calculate_winner(p1: Brush, p2: Brush) -> int:
 
 
 def main():
-    # t0 = time()
     pg.init()
     clock = pg.time.Clock()
     screen = pg.display.set_mode((WIDTH, HEIGHT))
+    font = pg.font.Font(size=40)
+    limit = 21 # time limit in s
+    end_ring = pg.mixer.Sound(file="assets/sounds/boxing_bell_multiple.wav")
     dt = 0
     background_image_path = resource_path("assets/wooden_floor.jpg")
     background = pg.image.load(background_image_path).convert()
@@ -191,6 +193,7 @@ def main():
 
     pg.display.set_caption("Paint It!")
 
+    t0 = time()
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -213,11 +216,15 @@ def main():
         
 
         dt = clock.tick(60) / 1000
+        time_left = int(limit - (time() - t0))
+        timer = font.render(str(time_left), False, "black")
+        screen.blit(timer)
+        if time_left < 0:
+            end_ring.play()
+            pg.time.wait(4000)
+            return
+
         pg.display.update()
-        # t1 = time()
-        # if t1 - t0 >= 60:
-        #     calculate_winner(p1, p2)
-        #     return
 
 
 if __name__ == "__main__":
