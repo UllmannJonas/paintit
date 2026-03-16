@@ -9,7 +9,7 @@ from time import time
 WIDTH = 720
 HEIGHT = 480
 BRUSH_RADIUS = 20
-BRUSH_SPEED = 100
+BRUSH_SPEED = 150
 MAX_PLAYERS = 2
 BRUSH_COLORS = [
     pg.Color("darkorange2"),
@@ -125,11 +125,11 @@ countdown_font = pg.font.Font(size=40)
 score_font = pg.font.Font(size=24)
 winner_font = pg.font.Font(size=100)
 
-timelimit = 31
+timelimit = 61
 finish_sfx = pg.mixer.Sound(r"assets\sounds\boxing_bell_multiple.wav")
 
 background_source = pg.image.load(
-    file=resource_path(r"assets\images\wooden_floor.jpg")
+    file=resource_path(r"assets\images\marble.jpg")
     ).convert()
 background = pg.transform.scale(background_source, (WIDTH, HEIGHT))
 
