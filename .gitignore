@@ -1,6 +1,7 @@
 .vscode/
 cleanup_build.py
 pyinstaller_command.txt
+assets_archive/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
