@@ -1,20 +1,33 @@
-from dataclasses import dataclass, field
-import os
-import sys
-from time import time
-
+#region imports
 import pygame as pg
+import numpy as np
+import os, sys
+from time import time
+#endregion imports
 
+#region globals
 WIDTH = 720
 HEIGHT = 480
 BRUSH_RADIUS = 20
-BRUSH_SPEED = 100
-BRUSH_COLORS = [pg.Color("darkorange2"), pg.Color("darkorchid3")]
-PATH_COLORS = [pg.Color("orange"), pg.Color("orchid")]
+BRUSH_SPEED = 150
+MAX_PLAYERS = 2
+BRUSH_COLORS = [
+    pg.Color("darkorange2"),
+    pg.Color("darkorchid3")]
+PATH_COLORS = [
+    pg.Color("orange"),
+    pg.Color("orchid")]
+ID_COLORS = [
+    (1, 0, 0), # 65536 in 2D-surfarray
+    (2, 0, 0)] # 131072 in 2D-surfarray
+ARRAY_ID = [
+    65536,
+    131072
+]
 START_POS = [
     pg.Vector2(WIDTH * 0.8, HEIGHT * 0.5),
-    pg.Vector2(WIDTH * 0.2, HEIGHT * 0.5)
-]
+    pg.Vector2(WIDTH * 0.2, HEIGHT * 0.5)]
+
 def resource_path(relative_path):
     if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
@@ -22,59 +35,51 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
+#endregion globals
 
-@dataclass
-class Path:
-    color: pg.Color
-    area: pg.Surface
-    locations: list[pg.Vector2] = field(default_factory=list)
-
-
+#region player
 class Brush:
-    def __init__(self, player_number: int = 1):
-        if player_number > self.max_players():
-            raise ValueError(f"Max players: {self.max_players()}")
-        if player_number not in [1, 2]:
-            raise ValueError("Player number must be 1 or 2")
-        
+    def __init__(self, player_number: int = 1):        
         self.n = player_number
         self.radius = BRUSH_RADIUS
         self.speed = BRUSH_SPEED
         self.color: pg.Color = BRUSH_COLORS[player_number - 1]
+        self.pathcolor: pg.Color = PATH_COLORS[player_number - 1]
+        self.id: pg.Color = pg.Color(ID_COLORS[player_number - 1])
+        self.array_id: int = ARRAY_ID[player_number - 1]
         self.pos: pg.Vector2 = START_POS[player_number - 1]
-        self.head = self._init_head()
-        self.path = self._init_path()
-        
+        self.head = pg.Surface((self.diameter, self.diameter), pg.SRCALPHA)
+        self.score: float = 0.0
+
     @property
     def diameter(self):
         return self.radius * 2
 
-    def max_players(self):
-        return 2
-
-    def _init_head(self):
-        head = pg.Surface((self.diameter, self.diameter), pg.SRCALPHA)
-        pg.draw.circle(head, self.color, (self.radius, self.radius), self.radius)
-        return head
-    
-    def _init_path(self):
-        area = pg.Surface((WIDTH, HEIGHT), pg.SRCALPHA)
-        color = PATH_COLORS[BRUSH_COLORS.index(self.color)]
-        return Path(color=color, area=area)
-    
     @property
     def corner0(self):
         return (int(self.pos.x - self.radius), int(self.pos.y - self.radius))
 
-    def move(self, dt, up=False, down=False, left=False, right=False):
-        if up:
-            self.pos.y -= self.speed * dt
-        if down:
-            self.pos.y += self.speed * dt
-        if left:
-            self.pos.x -= self.speed * dt
-        if right:
-            self.pos.x += self.speed * dt
+    def move(self, dt):
+        keys = pg.key.get_pressed()
+        match self.n:
+            case 1:
+                if keys[pg.K_UP]:
+                    self.pos.y -= self.speed * dt
+                if keys[pg.K_DOWN]:
+                    self.pos.y += self.speed * dt
+                if keys[pg.K_LEFT]:
+                    self.pos.x -= self.speed * dt
+                if keys[pg.K_RIGHT]:
+                    self.pos.x += self.speed * dt
+            case 2:
+                if keys[pg.K_w]:
+                    self.pos.y -= self.speed * dt
+                if keys[pg.K_s]:
+                    self.pos.y += self.speed * dt
+                if keys[pg.K_a]:
+                    self.pos.x -= self.speed * dt
+                if keys[pg.K_d]:
+                    self.pos.x += self.speed * dt
 
         # stay inside game screen
         if self.pos.y < 0 + self.radius:
@@ -86,140 +91,124 @@ class Brush:
         if self.pos.x > WIDTH - self.radius:
             self.pos.x = WIDTH - self.radius
 
-    def _log_path(self):
-        self.path.locations.append(self.pos.copy())
+    def paint(self, visual_surface: pg.Surface, score_surface: pg.Surface) -> None:
+        pg.draw.circle(visual_surface, self.pathcolor, self.pos, self.radius)
+        pg.draw.circle(score_surface, self.id, self.pos, self.radius)
+        self._update_score(score_surface)
 
-    def draw_path(self, screen: pg.Surface, player_surfaces: list[pg.Surface] = None):
-        # record current position and draw a circle onto the persistent path surface
-        self._log_path()
-
-        pg.draw.circle(self.path.area, self.path.color, self.pos, self.radius)
-
-        if self.n == 1:
-            other_player_surface = player_surfaces[1]
-        else:
-            other_player_surface = player_surfaces[0]
-        if self._overlap_with_path(other_player_surface):
-            self._blit_brush_head_on_path(other_player_surface)
-        
-        # blit the accumulated path onto the main screen
-        screen.blit(self.path.area, (0, 0))
-
-    def _overlap_with_path(self, other_player_surface: pg.Surface) -> bool:
-        own_path_mask = pg.mask.from_surface(self.path.area)
-        other_path_mask = pg.mask.from_surface(other_player_surface)
-
-        overlap = own_path_mask.overlap(other_path_mask, offset=(0, 0))
-        return overlap is not None
+    def show_sprite(self) -> pg.Surface:
+        self.head.fill((0, 0, 0, 0))
+        pg.draw.circle(self.head, self.color, self.pos, self.radius)
+        return self.head
     
-    def _blit_brush_head_on_path(self, other_player_surface: pg.Surface):
-        other_player_surface.blit(self.path.area, (0, 0))
+    def _update_score(self, score_surface: pg.Surface) -> None:
+        array = pg.surfarray.pixels2d(score_surface)
+        total_px = array.size
+        covered_px = np.sum(array == self.array_id)
+        self.score = covered_px / total_px
+# endregion player
+
+#region init
+pg.init()
+running = True
+pg.display.set_caption("Paint It!")
+
+screen = pg.display.set_mode((WIDTH, HEIGHT))
+visual_surf = pg.Surface((WIDTH, HEIGHT))
+visual_surf.set_colorkey((0, 0, 0))
+ownership = pg.Surface((WIDTH, HEIGHT))
+
+clock = pg.time.Clock()
+dt = 0
+
+countdown_font = pg.font.Font(size=40)
+score_font = pg.font.Font(size=24)
+winner_font = pg.font.Font(size=100)
+
+timelimit = 61
+finish_sfx = pg.mixer.Sound(r"assets\boxing_bell_multiple.wav")
+
+background_source = pg.image.load(
+    file=resource_path(r"assets\marble.jpg")
+    ).convert()
+background = pg.transform.scale(background_source, (WIDTH, HEIGHT))
+
+p1 = Brush(player_number=1)
+p2 = Brush(player_number=2)
+players = [p1, p2]
+
+t0 = time()
+debug = False
+#endregion init
+
+#region game loop
+while running:
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            running = False
+        if event.type == pg.KEYDOWN:
+            if event.key == pg.K_ESCAPE:
+                running = False
+    screen.blit(background)
+
+    p1.move(dt)
+    p2.move(dt)
+
+    p1.paint(visual_surf, ownership)
+    p2.paint(visual_surf, ownership)
+
+    screen.blit(visual_surf)
+    pg.draw.circle(screen, p1.color, p1.pos, p1.radius)
+    pg.draw.circle(screen, p2.color, p2.pos, p2.radius)
+
+    # Time ----------------------------------------------------- #
+    time_left = int(timelimit - (time() - t0))
+    screen.blit(countdown_font.render(str(time_left), False, "black"))
+
+    # Score ---------------------------------------------------- #
+    for p in players:
+        score = f"{round(p.score * 100)}%"
+        screen.blit(
+            score_font.render(score, True, "black"),
+            (p.pos.x - 16, p.pos.y - 8)
+        )
+
+    # Finish --------------------------------------------------- #
+    if time_left < 0:
+        finish_sfx.play()
+        if max(p1.score, p2.score) == p1.score:
+            winner_text = "Player 1 won!"
+            winner = p1
+        else:
+            winner_text = "Player 2 won!"
+            winner = p2
+        endtimer = 3
+        t0 = time()
+        while True:
+            pg.event.pump()
+            pg.draw.circle(screen, winner.color, winner.pos, winner.radius)
+            screen.blit(
+                winner_font.render(winner_text, False, "black"),
+                (WIDTH * 0.2, HEIGHT * 0.4)
+            )
+            winner.radius = min(winner.radius * 1.08, WIDTH * 2)
+            dt = clock.tick(60) / 1000
+            pg.display.update()
+            if time() - t0 >= endtimer:
+                running = False
+                break
 
 
-def player_move(player: Brush, dt) -> tuple[float, float]:
-    keys = pg.key.get_pressed()
-    match player.n:
-        case 1:
-            if keys[pg.K_UP]:
-                player.move(dt, up=True)
-            if keys[pg.K_DOWN]:
-                player.move(dt, down=True)
-            if keys[pg.K_LEFT]:
-                player.move(dt, left=True)
-            if keys[pg.K_RIGHT]:
-                player.move(dt, right=True)
-        case 2:
-            if keys[pg.K_w]:
-                player.move(dt, up=True)
-            if keys[pg.K_s]:
-                player.move(dt, down=True)
-            if keys[pg.K_a]:
-                player.move(dt, left=True)
-            if keys[pg.K_d]:
-                player.move(dt, right=True)
+    # Update --------------------------------------------------- #
+    dt = clock.tick(60) / 1000
+    pg.display.update()
 
-    return player.corner0
+    # Debug ----------------------------------------------------- #
+    if debug:
+        print(p1.color)
+        print(p1.head.get_flags())
+        print(p1.head.get_bitsize())
+        debug = False
+#endregion game loop
 
-
-def calculate_paint_percentage(player_path_area: pg.Surface) -> float:
-    # Create a mask from the player's path surface
-    path_mask = pg.mask.from_surface(player_path_area)
-
-    # Count the number of non-transparent (painted) pixels
-    painted_pixels = path_mask.count()
-
-    # Calculate the total screen area
-    total_screen_area = WIDTH * HEIGHT
-
-    # Calculate the percentage of the screen covered by the player's path
-    percentage = (painted_pixels / total_screen_area) * 100
-    return percentage
-
-
-def calculate_winner(p1: Brush, p2: Brush) -> int:
-    # Get the paint percentages for both players
-    p1_percentage = calculate_paint_percentage(p1.path.area)
-    p2_percentage = calculate_paint_percentage(p2.path.area)
-
-    # Print the percentage for both players (for debugging or display)
-    print(f"Player 1 painted {p1_percentage:.2f}% of the screen.")
-    print(f"Player 2 painted {p2_percentage:.2f}% of the screen.")
-
-    # Determine the winner based on the highest percentage
-    if p1_percentage > p2_percentage:
-        return 1  # Player 1 wins
-    elif p2_percentage > p1_percentage:
-        return 2  # Player 2 wins
-    else:
-        return 0  # Tie (both painted the same percentage)
-
-
-def main():
-    # t0 = time()
-    pg.init()
-    clock = pg.time.Clock()
-    screen = pg.display.set_mode((WIDTH, HEIGHT))
-    dt = 0
-    background_image_path = resource_path("assets/wooden_floor.jpg")
-    background = pg.image.load(background_image_path).convert()
-    background = pg.transform.scale(background, (WIDTH, HEIGHT))
-
-    screen.blit(background, (0, 0))
-    # give each player their own start position so they don't share the same Vector2
-    p1 = Brush(player_number=1)  # p1 is orange
-    p2 = Brush(player_number=2)  # p2 is purple
-
-    pg.display.set_caption("Paint It!")
-
-    while True:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                return
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_ESCAPE:
-                    return
-
-        p1_location = player_move(p1, dt)
-        p2_location = player_move(p2, dt)
-
-        screen.blit(background, (0, 0))
-
-        player_surface_list = [p1.path.area, p2.path.area]
-        p1.draw_path(screen, player_surfaces=player_surface_list)
-        p2.draw_path(screen, player_surfaces=player_surface_list)
-        
-        screen.blit(p1.head, p1_location)
-        screen.blit(p2.head, p2_location)
-        
-
-        dt = clock.tick(60) / 1000
-        pg.display.update()
-        # t1 = time()
-        # if t1 - t0 >= 60:
-        #     calculate_winner(p1, p2)
-        #     return
-
-
-if __name__ == "__main__":
-    main()
-    pg.quit()
+pg.quit()
