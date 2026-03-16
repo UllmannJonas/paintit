@@ -126,11 +126,13 @@ score_font = pg.font.Font(size=24)
 winner_font = pg.font.Font(size=100)
 
 timelimit = 61
-finish_sfx = pg.mixer.Sound(r"assets\boxing_bell_multiple.wav")
+finish_sfx = pg.mixer.Sound(
+    file=resource_path(r"assets\boxing_bell_multiple.wav")
+)
 
 background_source = pg.image.load(
     file=resource_path(r"assets\marble.jpg")
-    ).convert()
+).convert()
 background = pg.transform.scale(background_source, (WIDTH, HEIGHT))
 
 p1 = Brush(player_number=1)
